@@ -1,6 +1,7 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type FieldValues } from "react-hook-form";
+import { userSchema, TUserSchema } from "@/lib/types";
 
 const timezoneList = ["GMT", "EST", "MST", "CST", "PST"];
 
@@ -14,15 +15,20 @@ export default function Home() {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
     getValues,
-  } = useForm();
+    setError,
+  } = useForm<TUserSchema>({
+    resolver: zodResolver(userSchema),
+    defaultValues: { roles: [] },
+  });
 
-  const onSubmit = async (e: FieldValues) => {
+  const onSubmit = async (e: TUserSchema) => {
     const response = await fetch("/api/createuser", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: e.username,
+        username: e.username, // To test server side validation set username to 'XXX'
         email: e.email,
         password: e.password,
         confirmPassword: e.confirmPassword,
@@ -35,21 +41,31 @@ export default function Home() {
     });
     const data = await response.json();
 
-    if (!data.ok) {
-      alert("Submit failed. Please try again.");
-    }
+    // if (!data.ok) {
+    //   alert("Submit failed. Please try again.");
+    // }
 
     if (data.errors) {
-      const errors: { [key: string]: string }[] = data.errors;
-      errors.forEach((error) => {
+      const errorList: { [key: string]: string }[] = data.errors;
+      errorList.forEach((error) => {
         if (error.username) {
-          setErrorMap("username", { type: "server", message: error.username });
+          setError("username", { type: "server", message: error.username });
         }
       });
+      return;
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
     reset();
+  };
+
+  const handleRoleChange = (role: string, checked: boolean) => {
+    console.log(role, checked);
+    const currentRoles = getValues("roles") || [];
+    const updatedRoles = checked
+      ? [...currentRoles, role]
+      : currentRoles.filter((r) => r !== role);
+    setValue("roles", updatedRoles, { shouldValidate: true });
   };
 
   return (
@@ -64,10 +80,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("username", {
-              required: "Username is required",
-              minLength: { value: 3, message: "Username min length 3" },
-            })}
+            {...register("username")}
             type="text"
             placeholder="Username"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -82,10 +95,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("email", {
-              required: "Email is required",
-              minLength: { value: 3, message: "Email min length 3" },
-            })}
+            {...register("email")}
             type="email"
             placeholder="Email"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -100,10 +110,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("password", {
-              required: "Password is required",
-              minLength: { value: 3, message: "Password min length 3" },
-            })}
+            {...register("password")}
             type="text"
             placeholder="Password"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -118,11 +125,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("confirmPassword", {
-              required: "Confirm Password is required",
-              validate: (value) =>
-                value === getValues("password") || "The passwords do not match",
-            })}
+            {...register("confirmPassword")}
             type="text"
             placeholder="Confirm Password"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -137,10 +140,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("description", {
-              required: "Description is required",
-              minLength: { value: 3, message: "Description min length 3" },
-            })}
+            {...register("description")}
             type="textarea"
             placeholder="Description"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -155,12 +155,7 @@ export default function Home() {
               =============== 
           */}
           <select
-            {...register("timezone", {
-              required: {
-                value: true,
-                message: "Timezone is required",
-              },
-            })}
+            {...register("timezone")}
             defaultValue=""
             className=" text-gray-900 bg-white px-4 py-2 rounded"
           >
@@ -187,9 +182,7 @@ export default function Home() {
             {themeList.map((theme) => (
               <label key={theme}>
                 <input
-                  {...register("theme", {
-                    required: "Theme is required",
-                  })}
+                  {...register("theme")}
                   type="radio"
                   value={theme}
                   className="bg-white mr-1"
@@ -212,12 +205,7 @@ export default function Home() {
             {roleList.map((role) => (
               <label key={role}>
                 <input
-                  {...register("roles", {
-                    required: {
-                      value: true,
-                      message: "At least one role is required",
-                    },
-                  })}
+                  {...register("roles")}
                   type="checkbox"
                   value={role}
                   className="bg-white mr-1"
@@ -236,9 +224,7 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("joinDate", {
-              required: "Join Date is required",
-            })}
+            {...register("joinDate")}
             type="date"
             placeholder="Join Date"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
@@ -248,7 +234,6 @@ export default function Home() {
               {`${errors.joinDate.message}`}
             </div>
           )}
-          {isSubmitting.toString()}
           {/* ===============
               BUTTON   
               ===============
