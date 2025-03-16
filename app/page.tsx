@@ -18,6 +18,36 @@ export default function Home() {
   } = useForm();
 
   const onSubmit = async (e: FieldValues) => {
+    const response = await fetch("/api/createuser", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: e.username,
+        email: e.email,
+        password: e.password,
+        confirmPassword: e.confirmPassword,
+        description: e.description,
+        timezone: e.timezone,
+        theme: e.theme,
+        roles: e.roles,
+        joinDate: e.joinDate,
+      }),
+    });
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert("Submit failed. Please try again.");
+    }
+
+    if (data.errors) {
+      const errors: { [key: string]: string }[] = data.errors;
+      errors.forEach((error) => {
+        if (error.username) {
+          setErrorMap("username", { type: "server", message: error.username });
+        }
+      });
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 1000));
     reset();
   };
@@ -178,11 +208,11 @@ export default function Home() {
               ===============
           */}
           <div className="flex gap-2">
-            <span className="font-semibold w-16">Role</span>
+            <span className="font-semibold w-16">Roles</span>
             {roleList.map((role) => (
               <label key={role}>
                 <input
-                  {...register("role", {
+                  {...register("roles", {
                     required: {
                       value: true,
                       message: "At least one role is required",
@@ -196,9 +226,9 @@ export default function Home() {
               </label>
             ))}
           </div>
-          {errors.role && (
+          {errors.roles && (
             <div className="error text-red-500 py-2">
-              {errors.role.message as string}
+              {errors.roles.message as string}
             </div>
           )}
           {/* ===============
@@ -206,16 +236,16 @@ export default function Home() {
               ===============
           */}
           <input
-            {...register("joiningDate", {
-              required: "Joining Date is required",
+            {...register("joinDate", {
+              required: "Join Date is required",
             })}
             type="date"
-            placeholder="Joining Date"
+            placeholder="Join Date"
             className=" text-gray-900 bg-white px-4 py-2 rounded"
           />
-          {errors.joiningDate && (
+          {errors.joinDate && (
             <div className="error text-red-500 py-2">
-              {`${errors.joiningDate.message}`}
+              {`${errors.joinDate.message}`}
             </div>
           )}
           {isSubmitting.toString()}
